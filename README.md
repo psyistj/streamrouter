@@ -9,6 +9,14 @@ npm install
 
 ## Project Run
 
-```
+For uwb
+
+```shell
 node app.js
+```
+
+For instamove
+
+```shell
+sh ins_start.sh
 ```
