@@ -14,7 +14,7 @@ var util = require('util')
 var log_file = fs.createWriteStream(__dirname + '/ins_be.log', {flags : 'w'})
 var log_stdout = process.stdout
 
-console.log = function(d) { //
+console.log = function(d) {
   log_file.write(util.format(d) + '\n');
   log_stdout.write(util.format(d) + '\n');
 }
@@ -195,5 +195,5 @@ app.post('/insbe/appendEvent', (req, res) => {
 })
 
 app.listen(port, () => {
-  console.log(`listening at http://localhost:${port}`)
+  console.log(`listening at http://localhost:${port} now`)
 })

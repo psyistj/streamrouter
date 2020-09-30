@@ -4,6 +4,15 @@ const ffmpeg = require("fluent-ffmpeg")
 const webSocketStream = require("websocket-stream/stream")
 const fs = require('fs')
 
+var util = require('util')
+var log_file = fs.createWriteStream(__dirname + '/ins_flv.log', {flags : 'w'})
+var log_stdout = process.stdout
+
+console.log = function(d) {
+  log_file.write(util.format(d) + '\n');
+  log_stdout.write(util.format(d) + '\n');
+}
+
 const CAMERA_IP = ['rtsp://192.168.3.96:554/av0_1', 'rtsp://192.168.3.98:554/av0_1', 'rtsp://192.168.3.99:554/av0_1']
 
 function localServer() {
