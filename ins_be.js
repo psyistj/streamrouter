@@ -1,5 +1,6 @@
 const express = require('express')
 const mysql = require('mysql')
+const fs = require('fs')
 const app = express()
 const port = 3001
 const conn = mysql.createConnection({
@@ -8,6 +9,15 @@ const conn = mysql.createConnection({
   password: 'paopao123',
   database: 'instamove'
 })
+
+var util = require('util')
+var log_file = fs.createWriteStream(__dirname + '/ins_be.log', {flags : 'w'})
+var log_stdout = process.stdout
+
+console.log = function(d) { //
+  log_file.write(util.format(d) + '\n');
+  log_stdout.write(util.format(d) + '\n');
+}
 
 app.use(express.json())
 
@@ -69,6 +79,19 @@ app.post('/insbe/getTeam', (req, res) => {
   const projectId = req.body.projectId
   const sql = 'select teamId, teamName from `teams` where userId = ? and projectId = ?'
   conn.query(sql, [userId, projectId], (err, result) => {
+    if (err) {
+      const msg = `[INS_BE] query failed: ${err.message}`
+      console.error(msg)
+      res.send(msg)
+    }
+    res.send(result)
+  })
+})
+
+app.post('/insbe/getIndividual', (req, res) => {
+  const personId = req.body.personId
+  const sql = 'select events from `individuals` where personId = ?'
+  conn.query(sql, personId, (err, result) => {
     if (err) {
       const msg = `[INS_BE] query failed: ${err.message}`
       console.error(msg)
@@ -144,6 +167,23 @@ app.post('/insbe/addPerson', (req, res) => {
   const sql = 'insert into `individuals` set ?'
 
   conn.query(sql, person, (err, result) => {
+    if (err) {
+      const msg = `[INS_BE] query failed: ${err.message}`
+      console.error(msg)
+      res.send(msg)
+    }
+
+    res.send(result)
+  })
+})
+
+app.post('/insbe/appendEvent', (req, res) => {
+  const personId = req.body.personId
+  const events = req.body.events
+
+  const sql = 'update `individuals` set events = ? where personId = ?'
+
+  conn.query(sql, [events, personId], (err, result) => {
     if (err) {
       const msg = `[INS_BE] query failed: ${err.message}`
       console.error(msg)
