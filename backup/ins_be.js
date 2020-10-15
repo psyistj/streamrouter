@@ -15,8 +15,6 @@ const conn = mysql.createConnection(key)
 let reqNum = 0
 
 let util = require('util')
-const e = require('express')
-const { query } = require('express')
 let log_file = fs.createWriteStream(__dirname + '/ins_be.log', {flags : 'w'})
 let log_stdout = process.stdout
 
@@ -642,6 +640,43 @@ app.post('/insbe/delEventTag', (req, res) => {
     } else {
       console.log(`POST /insbe/delEventTag`)
       res.send('tad deleted')
+    }
+  })
+})
+
+app.post('/insbe/triggerCallback', (req, res) => {
+  const event = req.body.event
+
+  event.reconstructMethod = JSON.stringify(event.reconstructMethod)
+  event.videos = JSON.stringify(event.videos)
+
+  const sql = 'insert into `events` set ?'
+  
+  conn.query(sql, event, (err, result) => {
+
+    const resData = {
+      "code": 200,
+      "msg": "event received",
+      "data": {}
+    }
+
+    if (err) {
+      const msg = `[INS_BE] query failed: ${err.message}`
+      console.error(msg)
+      const sql = 'update `events` set ? where eventId = ?'
+
+      conn.query(sql, [event, event.eventId], (err, result) => {
+        if (err) {
+          const msg = `[INS_BE] query failed: ${err.message}`
+          console.error(msg)
+        } else {
+          console.log(`UPDATE ${event.eventId}`)
+          res.send(resData)
+        }
+      })
+    } else {
+      console.log(`INSERT ${event.eventId}`)
+      res.send(resData)
     }
   })
 })

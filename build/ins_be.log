@@ -1,0 +1,276 @@
+[1]listening at http://localhost:3001 now
+[2]POST /insbe/getPersonTagEvent
+[3][CRON] excuting cron task
+[4]GET http://192.168.3.4/instamove/events
+[5]UPDATE test_event_03
+[6]UPDATE test_event_0001
+[7]UPDATE event_2020_9_21_15_31_58
+[8]UPDATE test_event_01
+[9]UPDATE test_event_02
+[10]UPDATE event_2020_9_21_14_25_05
+[11]POST /insbe/getPersonTagEvent
+[12]POST /insbe/getPersonTagEvent
+[13][CRON] excuting cron task
+[14]GET http://192.168.3.4/instamove/events
+[15]UPDATE test_event_03
+[16]UPDATE test_event_0001
+[17]UPDATE event_2020_9_21_15_31_58
+[18]UPDATE test_event_01
+[19]UPDATE test_event_02
+[20]UPDATE event_2020_9_21_14_25_05
+[21]POST /insbe/getPersonTagEvent
+[22]POST /insbe/getPersonTagEvent
+[23]POST /insbe/getPersonTagEvent
+[24][CRON] excuting cron task
+[25]GET http://192.168.3.4/instamove/events
+[26]UPDATE test_event_03
+[27]UPDATE test_event_0001
+[28]UPDATE event_2020_9_21_15_31_58
+[29]UPDATE test_event_01
+[30]UPDATE test_event_02
+[31]UPDATE event_2020_9_21_14_25_05
+[32]POST /insbe/getPersonEvent
+[33]POST /insbe/getPersonTagEvent
+[34]POST /insbe/getPersonTagEvent
+[35][CRON] excuting cron task
+[36]GET http://192.168.3.4/instamove/events
+[37]UPDATE test_event_03
+[38]UPDATE test_event_0001
+[39]UPDATE event_2020_9_21_15_31_58
+[40]UPDATE test_event_01
+[41]UPDATE test_event_02
+[42]UPDATE event_2020_9_21_14_25_05
+[43]SELECT events
+[44]GET /insbe/getTags
+[45]GET /insbe/getIndividuals
+[46][CRON] excuting cron task
+[47]GET http://192.168.3.4/instamove/events
+[48]UPDATE test_event_03
+[49]UPDATE test_event_0001
+[50]UPDATE event_2020_9_21_15_31_58
+[51]UPDATE test_event_01
+[52]UPDATE test_event_02
+[53]UPDATE event_2020_9_21_14_25_05
+[54]SELECT events
+[55]GET /insbe/getIndividuals
+[56]GET /insbe/getTags
+[57][CRON] excuting cron task
+[58]GET http://192.168.3.4/instamove/events
+[59]UPDATE test_event_03
+[60]UPDATE test_event_0001
+[61]UPDATE event_2020_9_21_15_31_58
+[62]UPDATE test_event_01
+[63]UPDATE test_event_02
+[64]UPDATE event_2020_9_21_14_25_05
+[65]SELECT events
+[66]GET /insbe/getTags
+[67]GET /insbe/getIndividuals
+[68][CRON] excuting cron task
+[69]GET http://192.168.3.4/instamove/events
+[70]UPDATE test_event_03
+[71]UPDATE test_event_0001
+[72]UPDATE event_2020_9_21_15_31_58
+[73]UPDATE test_event_01
+[74]UPDATE test_event_02
+[75]UPDATE event_2020_9_21_14_25_05
+[76]SELECT events
+[77]GET /insbe/getIndividuals
+[78]GET /insbe/getTags
+[79][CRON] excuting cron task
+[80]GET http://192.168.3.4/instamove/events
+[81]UPDATE test_event_03
+[82]UPDATE test_event_0001
+[83]UPDATE event_2020_9_21_15_31_58
+[84]UPDATE test_event_01
+[85]UPDATE test_event_02
+[86]UPDATE event_2020_9_21_14_25_05
+[87]SELECT events
+[88]GET /insbe/getTags
+[89]GET /insbe/getIndividuals
+[90][CRON] excuting cron task
+[91]GET http://192.168.3.4/instamove/events
+[92]UPDATE test_event_03
+[93]UPDATE test_event_0001
+[94]UPDATE event_2020_9_21_15_31_58
+[95]UPDATE test_event_01
+[96]UPDATE test_event_02
+[97]UPDATE event_2020_9_21_14_25_05
+[98]SELECT events
+[99]GET /insbe/getIndividuals
+[100]GET /insbe/getTags
+[101][CRON] excuting cron task
+[102]GET http://192.168.3.4/instamove/events
+[103]UPDATE test_event_03
+[104]UPDATE test_event_0001
+[105]UPDATE event_2020_9_21_15_31_58
+[106]UPDATE test_event_01
+[107]UPDATE test_event_02
+[108]UPDATE event_2020_9_21_14_25_05
+[109]SELECT events
+[110]GET /insbe/getTags
+[111]GET /insbe/getIndividuals
+[112][CRON] excuting cron task
+[113]GET http://192.168.3.4/instamove/events
+[114]UPDATE test_event_03
+[115]UPDATE test_event_0001
+[116]UPDATE event_2020_9_21_15_31_58
+[117]UPDATE test_event_01
+[118]UPDATE test_event_02
+[119]UPDATE event_2020_9_21_14_25_05
+[120]SELECT events
+[121]GET /insbe/getIndividuals
+[122]GET /insbe/getTags
+[123][CRON] excuting cron task
+[124]GET http://192.168.3.4/instamove/events
+[125]UPDATE test_event_03
+[126]UPDATE test_event_0001
+[127]UPDATE event_2020_9_21_15_31_58
+[128]UPDATE test_event_01
+[129]UPDATE test_event_02
+[130]UPDATE event_2020_9_21_14_25_05
+[131]SELECT events
+[132]GET /insbe/getTags
+[133]GET /insbe/getIndividuals
+[134][CRON] excuting cron task
+[135]GET http://192.168.3.4/instamove/events
+[136]UPDATE test_event_03
+[137]UPDATE test_event_0001
+[138]UPDATE event_2020_9_21_15_31_58
+[139]UPDATE test_event_01
+[140]UPDATE test_event_02
+[141]UPDATE event_2020_9_21_14_25_05
+[142]SELECT events
+[143]GET /insbe/getIndividuals
+[144]GET /insbe/getTags
+[145][CRON] excuting cron task
+[146]GET http://192.168.3.4/instamove/events
+[147]UPDATE test_event_03
+[148]UPDATE test_event_0001
+[149]UPDATE event_2020_9_21_15_31_58
+[150]UPDATE test_event_01
+[151]UPDATE test_event_02
+[152]UPDATE event_2020_9_21_14_25_05
+[153]SELECT events
+[154]GET /insbe/getTags
+[155]GET /insbe/getIndividuals
+[156][CRON] excuting cron task
+[157]GET http://192.168.3.4/instamove/events
+[158]UPDATE test_event_03
+[159]UPDATE test_event_0001
+[160]UPDATE event_2020_9_21_15_31_58
+[161]UPDATE test_event_01
+[162]UPDATE test_event_02
+[163]UPDATE event_2020_9_21_14_25_05
+[164]SELECT events
+[165]GET /insbe/getIndividuals
+[166]GET /insbe/getTags
+[167][CRON] excuting cron task
+[168]GET http://192.168.3.4/instamove/events
+[169]UPDATE test_event_03
+[170]UPDATE test_event_0001
+[171]UPDATE event_2020_9_21_15_31_58
+[172]UPDATE test_event_01
+[173]UPDATE test_event_02
+[174]UPDATE event_2020_9_21_14_25_05
+[175]SELECT events
+[176]GET /insbe/getTags
+[177]GET /insbe/getIndividuals
+[178][CRON] excuting cron task
+[179]GET http://192.168.3.4/instamove/events
+[180]UPDATE test_event_03
+[181]UPDATE test_event_0001
+[182]UPDATE event_2020_9_21_15_31_58
+[183]UPDATE test_event_01
+[184]UPDATE test_event_02
+[185]UPDATE event_2020_9_21_14_25_05
+[186]SELECT events
+[187]GET /insbe/getTags
+[188]GET /insbe/getIndividuals
+[189][CRON] excuting cron task
+[190]GET http://192.168.3.4/instamove/events
+[191]UPDATE test_event_03
+[192]UPDATE test_event_0001
+[193]UPDATE event_2020_9_21_15_31_58
+[194]UPDATE test_event_01
+[195]UPDATE test_event_02
+[196]UPDATE event_2020_9_21_14_25_05
+[197]SELECT events
+[198]GET /insbe/getIndividuals
+[199]GET /insbe/getTags
+[200][CRON] excuting cron task
+[201]GET http://192.168.3.4/instamove/events
+[202]UPDATE test_event_03
+[203]UPDATE test_event_0001
+[204]UPDATE event_2020_9_21_15_31_58
+[205]UPDATE test_event_01
+[206]UPDATE test_event_02
+[207]UPDATE event_2020_9_21_14_25_05
+[208]SELECT events
+[209]GET /insbe/getTags
+[210]GET /insbe/getIndividuals
+[211][CRON] excuting cron task
+[212]GET http://192.168.3.4/instamove/events
+[213]UPDATE test_event_03
+[214]UPDATE test_event_0001
+[215]UPDATE event_2020_9_21_15_31_58
+[216]UPDATE test_event_01
+[217]UPDATE test_event_02
+[218]UPDATE event_2020_9_21_14_25_05
+[219]SELECT events
+[220]GET /insbe/getIndividuals
+[221]GET /insbe/getTags
+[222][CRON] excuting cron task
+[223]GET http://192.168.3.4/instamove/events
+[224]UPDATE test_event_03
+[225]UPDATE test_event_0001
+[226]UPDATE event_2020_9_21_15_31_58
+[227]UPDATE test_event_01
+[228]UPDATE test_event_02
+[229]UPDATE event_2020_9_21_14_25_05
+[230]SELECT events
+[231]GET /insbe/getTags
+[232]GET /insbe/getIndividuals
+[233][CRON] excuting cron task
+[234]GET http://192.168.3.4/instamove/events
+[235]UPDATE test_event_03
+[236]UPDATE test_event_0001
+[237]UPDATE event_2020_9_21_15_31_58
+[238]UPDATE test_event_01
+[239]UPDATE test_event_02
+[240]UPDATE event_2020_9_21_14_25_05
+[241]SELECT events
+[242]GET /insbe/getIndividuals
+[243]GET /insbe/getTags
+[244][CRON] excuting cron task
+[245]GET http://192.168.3.4/instamove/events
+[246]UPDATE test_event_03
+[247]UPDATE test_event_0001
+[248]UPDATE event_2020_9_21_15_31_58
+[249]UPDATE test_event_01
+[250]UPDATE test_event_02
+[251]UPDATE event_2020_9_21_14_25_05
+[252]SELECT events
+[253]GET /insbe/getTags
+[254]GET /insbe/getIndividuals
+[255][CRON] excuting cron task
+[256]GET http://192.168.3.4/instamove/events
+[257]UPDATE test_event_03
+[258]UPDATE test_event_0001
+[259]UPDATE event_2020_9_21_15_31_58
+[260]UPDATE test_event_01
+[261]UPDATE test_event_02
+[262]UPDATE event_2020_9_21_14_25_05
+[263]SELECT events
+[264]GET /insbe/getIndividuals
+[265]GET /insbe/getTags
+[266][CRON] excuting cron task
+[267]GET http://192.168.3.4/instamove/events
+[268]UPDATE test_event_03
+[269]UPDATE test_event_0001
+[270]UPDATE event_2020_9_21_15_31_58
+[271]UPDATE test_event_01
+[272]UPDATE test_event_02
+[273]UPDATE event_2020_9_21_14_25_05
+[274]SELECT events
+[275]GET /insbe/getTags
+[276]GET /insbe/getIndividuals
