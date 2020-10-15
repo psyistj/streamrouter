@@ -3,17 +3,19 @@ const expressWebSocket = require("express-ws")
 const ffmpeg = require("fluent-ffmpeg")
 const webSocketStream = require("websocket-stream/stream")
 const fs = require('fs')
+const config = require('./insbe-config.json')
 
-var util = require('util')
-var log_file = fs.createWriteStream(__dirname + '/ins_flv.log', {flags : 'w'})
-var log_stdout = process.stdout
+const CAMERA_IP = config.CAMERA_IP
+const PORT = config.STREAM_SERVER_PORT
+
+let util = require('util')
+let log_file = fs.createWriteStream(__dirname + '/ins_flv.log', {flags : 'w'})
+let log_stdout = process.stdout
 
 console.log = function(d) {
   log_file.write(util.format(d) + '\n');
   log_stdout.write(util.format(d) + '\n');
 }
-
-const CAMERA_IP = ['rtsp://192.168.3.96:554/av0_1', 'rtsp://192.168.3.98:554/av0_1', 'rtsp://192.168.3.99:554/av0_1']
 
 function localServer() {
   let app = express();
@@ -23,7 +25,7 @@ function localServer() {
     perMessageDeflate: true
   });
   app.ws("/rtsp/:id/", rtspRequestHandle)
-  app.listen(3002);
+  app.listen(PORT);
   console.log("express listened")
 }
 
@@ -37,8 +39,8 @@ function rtspRequestHandle(ws, req) {
     browserBufferTimeout: 1000000
   });
   let url = CAMERA_IP[req.query.url];
-  console.log("rtsp url:", url);
-  console.log("rtsp params:", req.params);
+  console.log("rtsp url: " + url);
+  console.log("rtsp params: " + JSON.stringify(req.params));
   
   // ffmpet转码
   let ffmpegCommand = ffmpeg(url)
