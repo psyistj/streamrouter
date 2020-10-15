@@ -274,3 +274,135 @@
 [274]SELECT events
 [275]GET /insbe/getTags
 [276]GET /insbe/getIndividuals
+[277][CRON] excuting cron task
+[278]GET http://192.168.3.4/instamove/events
+[279]UPDATE test_event_03
+[280]UPDATE test_event_0001
+[281]UPDATE event_2020_9_21_15_31_58
+[282]UPDATE test_event_01
+[283]UPDATE test_event_02
+[284]UPDATE event_2020_9_21_14_25_05
+[285]SELECT events
+[286]GET /insbe/getIndividuals
+[287]GET /insbe/getTags
+[288][CRON] excuting cron task
+[289]GET http://192.168.3.4/instamove/events
+[290]UPDATE test_event_03
+[291]UPDATE test_event_0001
+[292]UPDATE event_2020_9_21_15_31_58
+[293]UPDATE test_event_01
+[294]UPDATE test_event_02
+[295]UPDATE event_2020_9_21_14_25_05
+[296]SELECT events
+[297]GET /insbe/getTags
+[298]GET /insbe/getIndividuals
+[299][CRON] excuting cron task
+[300]GET http://192.168.3.4/instamove/events
+[301]UPDATE test_event_03
+[302]UPDATE test_event_0001
+[303]UPDATE event_2020_9_21_15_31_58
+[304]UPDATE test_event_01
+[305]UPDATE test_event_02
+[306]UPDATE event_2020_9_21_14_25_05
+[307]SELECT events
+[308]GET /insbe/getIndividuals
+[309]GET /insbe/getTags
+[310][CRON] excuting cron task
+[311]GET http://192.168.3.4/instamove/events
+[312]UPDATE test_event_03
+[313]UPDATE test_event_0001
+[314]UPDATE event_2020_9_21_15_31_58
+[315]UPDATE test_event_01
+[316]UPDATE test_event_02
+[317]UPDATE event_2020_9_21_14_25_05
+[318]SELECT events
+[319]GET /insbe/getTags
+[320]GET /insbe/getIndividuals
+[321][CRON] excuting cron task
+[322]GET http://192.168.3.4/instamove/events
+[323]UPDATE test_event_03
+[324]UPDATE test_event_0001
+[325]UPDATE event_2020_9_21_15_31_58
+[326]UPDATE test_event_01
+[327]UPDATE test_event_02
+[328]UPDATE event_2020_9_21_14_25_05
+[329]SELECT events
+[330]GET /insbe/getIndividuals
+[331]GET /insbe/getTags
+[332][CRON] excuting cron task
+[333]GET http://192.168.3.4/instamove/events
+[334]UPDATE test_event_03
+[335]UPDATE test_event_0001
+[336]UPDATE event_2020_9_21_15_31_58
+[337]UPDATE test_event_01
+[338]UPDATE test_event_02
+[339]UPDATE event_2020_9_21_14_25_05
+[340]SELECT events
+[341]GET /insbe/getTags
+[342]GET /insbe/getIndividuals
+[343][CRON] excuting cron task
+[344]GET http://192.168.3.4/instamove/events
+[345]UPDATE test_event_03
+[346]UPDATE test_event_0001
+[347]UPDATE event_2020_9_21_15_31_58
+[348]UPDATE test_event_01
+[349]UPDATE test_event_02
+[350]UPDATE event_2020_9_21_14_25_05
+[351]SELECT events
+[352]GET /insbe/getIndividuals
+[353]GET /insbe/getTags
+[354][CRON] excuting cron task
+[355]GET http://192.168.3.4/instamove/events
+[356]UPDATE test_event_03
+[357]UPDATE test_event_0001
+[358]UPDATE event_2020_9_21_15_31_58
+[359]UPDATE test_event_01
+[360]UPDATE test_event_02
+[361]UPDATE event_2020_9_21_14_25_05
+[362]SELECT events
+[363]GET /insbe/getTags
+[364]GET /insbe/getIndividuals
+[365][CRON] excuting cron task
+[366]GET http://192.168.3.4/instamove/events
+[367]UPDATE test_event_03
+[368]UPDATE test_event_0001
+[369]UPDATE event_2020_9_21_15_31_58
+[370]UPDATE test_event_01
+[371]UPDATE test_event_02
+[372]UPDATE event_2020_9_21_14_25_05
+[373]SELECT events
+[374]GET /insbe/getIndividuals
+[375]GET /insbe/getTags
+[376][CRON] excuting cron task
+[377]GET http://192.168.3.4/instamove/events
+[378]UPDATE test_event_03
+[379]UPDATE test_event_0001
+[380]UPDATE event_2020_9_21_15_31_58
+[381]UPDATE test_event_01
+[382]UPDATE test_event_02
+[383]UPDATE event_2020_9_21_14_25_05
+[384]SELECT events
+[385]GET /insbe/getTags
+[386]GET /insbe/getIndividuals
+[387][CRON] excuting cron task
+[388]GET http://192.168.3.4/instamove/events
+[389]UPDATE test_event_03
+[390]UPDATE test_event_0001
+[391]UPDATE event_2020_9_21_15_31_58
+[392]UPDATE test_event_01
+[393]UPDATE test_event_02
+[394]UPDATE event_2020_9_21_14_25_05
+[395]SELECT events
+[396]GET /insbe/getIndividuals
+[397]GET /insbe/getTags
+[398][CRON] excuting cron task
+[399]GET http://192.168.3.4/instamove/events
+[400]UPDATE test_event_03
+[401]UPDATE test_event_0001
+[402]UPDATE event_2020_9_21_15_31_58
+[403]UPDATE test_event_01
+[404]UPDATE test_event_02
+[405]UPDATE event_2020_9_21_14_25_05
+[406]SELECT events
+[407]GET /insbe/getTags
+[408]GET /insbe/getIndividuals
