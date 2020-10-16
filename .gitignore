@@ -1,5 +1,4 @@
 node_modules
 public/models/*
 build/*
-key.json
 *.mp4
