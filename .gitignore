@@ -2,3 +2,5 @@ node_modules
 public/models/*
 build/*
 *.mp4
+logs/*
+dist/*

@@ -1,0 +1,11 @@
+{
+  "apps": {
+    "name": "pm2-ins-server",
+    "script": "./insstart.sh",
+    "ignore_watch": [
+        "node_modules"
+    ],
+    "instances": 1,
+    "log_date_format": "YYYY-MM-DD HH:mm:ss"
+  }
+}

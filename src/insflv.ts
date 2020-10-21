@@ -5,7 +5,7 @@ const webSocketStream = require('websocket-stream/stream')
 import ws from 'ws'
 import fs from 'fs'
 import util from 'util'
-import config from './insbe-config.json'
+import config from './config/insbe-config.json'
 
 const CAMERA_IP: string[] = config.CAMERA_IP
 const PORT: number = config.STREAM_SERVER_PORT

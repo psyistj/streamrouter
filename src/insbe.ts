@@ -1,16 +1,19 @@
 import express from 'express'
+import compression from 'compression'
+import helmet from 'helmet'
 import mysql from 'mysql'
 import cron from 'node-cron'
 import fs from 'fs'
 import axios, { AxiosAdapter, AxiosError, AxiosInstance, AxiosResponse } from 'axios'
 import util from 'util'
-import config from './insbe-config.json'
-import key from './key.json'
-import e from 'express'
+import config from './config/insbe-config.json'
+import key from './config/key.json'
 
 const file_server: string = config.FILE_SERVER
 const project_name: string = config.PROJECT_NAME
 const app: express.Application = express()
+app.use(compression())
+app.use(helmet())
 const port: number = config.SERVER_PORT
 const conn: mysql.Connection = mysql.createConnection(key)
 
@@ -20,8 +23,8 @@ let log_file: fs.WriteStream = fs.createWriteStream(__dirname + '/ins_be.log', {
 let log_stdout = process.stdout
 
 console.log = function (d: any) {
-  log_file.write('[' + (++reqNum) + ']' + util.format(d) + '\n')
-  log_stdout.write('[' + (reqNum) + ']' + util.format(d) + '\n')
+  log_file.write('[' + (++reqNum) + '] ' + util.format(d) + '\n')
+  log_stdout.write('[' + (reqNum) + '] ' + util.format(d) + '\n')
 }
 
 // models
@@ -109,12 +112,12 @@ cron.schedule('*/5 * * * * *', (): void => {
         let continueFlag: boolean = true
         conn.query(sql, event, (err: mysql.MysqlError | null) => {
           if (err) {
-            console.error(`[INS_BE] query failed: ${err.message}`)
+            console.log(`[INS_BE] query failed: ${err.message}`)
             const sql: string = 'update `events` set ? where eventId = ?'
 
             conn.query(sql, [event, event.eventId], (err: mysql.MysqlError | null) => {
               if (err) {
-                console.error(`[INS_BE] query failed: ${err.message}`)
+                console.log(`[INS_BE] query failed: ${err.message}`)
               } else {
                 console.log(`UPDATE ${event.eventId}`)
               }
@@ -145,10 +148,10 @@ app.get('/insbe/', (req: express.Request, res: express.Response) => {
 
 // File Server
 app.get('/insbe/event', (req: express.Request, res: express.Response) => {
-  const selectedEvent: string = String(req.query.selectedEvent)
-  axios.get(`${file_server}/${project_name}/events/${selectedEvent}`).then((response: AxiosResponse) => {
+  const eventId: string = String(req.query.eventId)
+  axios.get(`${file_server}/${project_name}/events/${eventId}`).then((response: AxiosResponse) => {
     if (response.data.msg === 'event found') {
-      console.log(`GET ${file_server}/${project_name}/events/${selectedEvent}`)
+      console.log(`GET ${file_server}/${project_name}/events/${eventId}`)
       res.send(response.data.data)
     }
   }).catch((err: AxiosError) => {
@@ -377,22 +380,40 @@ app.post('/insbe/events/trigger_start', (req: express.Request, res: express.Resp
   const teamId: number = req.body.teamId
   const startTime: string = req.body.startTime
   const cameraIPs: string[] = req.body.cameraIPs
-  axios.post(`${file_server}/${project_name}/events/trigger_start`, {
-    eventName: eventName,
-    userId: userId,
-    projectId: projectId,
-    teamId: teamId,
-    startTime: startTime,
-    cameraIPs: cameraIPs
-  }).then((response: AxiosResponse) => {
-    if (response.data.msg === 'trigger start') {
-      console.log(`POST ${file_server}/${project_name}/events/trigger_start`)
-      res.send('trigger start')
+
+  const sql: string = 'select `trigger` from `teamTrigger` where teamId = ?'
+  conn.query(sql, teamId, (err: mysql.MysqlError | null, result: any) => {
+    if (err) {
+      console.log(`[INS_BE] query failed: ${err.message}`)
+      res.send(null)
+    } else {
+      console.log(`POST /insbe/getTrigger`)
+      if (result.length > 0) {
+        const trigger = JSON.parse(result[0].trigger)
+        axios.post(`${file_server}/${project_name}/events/trigger_start`, {
+          eventName: eventName,
+          userId: userId,
+          projectId: projectId,
+          teamId: teamId,
+          trigger: trigger,
+          startTime: startTime,
+          cameraIPs: cameraIPs
+        }).then((response: AxiosResponse) => {
+          if (response.data.msg === 'trigger start') {
+            console.log(`POST ${file_server}/${project_name}/events/trigger_start`)
+            res.send('trigger start')
+          }
+        }).catch((err: AxiosError) => {
+          console.log(err)
+          res.send(null)
+        })
+      } else {
+        res.send(null)
+      }
+      
     }
-  }).catch((err: AxiosError) => {
-    console.log(err)
-    res.send(null)
   })
+  
 })
 
 app.post('/insbe/events/trigger_stop', (req: express.Request, res: express.Response) => {
@@ -412,7 +433,7 @@ app.get('/insbe/events', (req: express.Request, res: express.Response) => {
   const sql: string = 'select * from `events`'
   conn.query(sql, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`GET /insbe/events`)
@@ -429,7 +450,7 @@ app.get('/insbe/getUsers', (req: express.Request, res: express.Response) => {
   const sql: string = 'select * from `users`'
   conn.query(sql, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`GET /insbe/getUsers`)
@@ -442,7 +463,7 @@ app.get('/insbe/getProjects', (req: express.Request, res: express.Response) => {
   const sql: string = 'select * from `projects`'
   conn.query(sql, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`GET /insbe/getProjects`)
@@ -455,7 +476,7 @@ app.post('/insbe/getTeams', (req: express.Request, res: express.Response) => {
   const sql: string = 'select * from `teams`'
   conn.query(sql, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/getTeams`)
@@ -469,7 +490,7 @@ app.post('/insbe/getIndividuals', (req: express.Request, res: express.Response) 
   const sql: string = 'select personId, personName from `individuals` where teamId = ?'
   conn.query(sql, teamId, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`GET /insbe/getIndividuals`)
@@ -482,7 +503,7 @@ app.get('/insbe/getTags', (req: express.Request, res: express.Response) => {
   const sql: string = 'select * from `tags`'
   conn.query(sql, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`GET /insbe/getTags`)
@@ -495,7 +516,7 @@ app.get('/insbe/getFavourite', (req: express.Request, res: express.Response) => 
   const sql: string = 'select eventId from `events` where favourite = 1'
   conn.query(sql, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`GET /insbe/getFavourite`)
@@ -509,7 +530,7 @@ app.post('/insbe/getUser', (req: express.Request, res: express.Response) => {
   const sql: string = 'select userId, username from `users` where username = ? and userpass = ?'
   conn.query(sql, [user.username, user.userpass], (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/getUser`)
@@ -524,7 +545,7 @@ app.post('/insbe/getTeam', (req: express.Request, res: express.Response) => {
   const sql: string = 'select teamId, teamName from `teams` where projectId = ? and teamId in (select distinct teamId from userTeam where userId = ?)'
   conn.query(sql, [projectId, userId], (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/getTeam`)
@@ -538,7 +559,7 @@ app.post('/insbe/getIndividual', (req: express.Request, res: express.Response) =
   const sql: string = 'select events from `individuals` where personId = ?'
   conn.query(sql, personId, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/getIndividual`)
@@ -552,7 +573,7 @@ app.post('/insbe/getTag', (req: express.Request, res: express.Response) => {
   const sql: string = 'select eventId, tagId from `eventTag` where eventId = ?'
   conn.query(sql, eventId, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/getTag`)
@@ -566,7 +587,7 @@ app.post('/insbe/getPersonEvent', (req: express.Request, res: express.Response) 
   const sql: string = 'select * from `events` where eventId in (select distinct eventId from `personEvent` where personId = ?)'
   conn.query(sql, personId, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/getPersonEvent`)
@@ -580,7 +601,7 @@ app.post('/insbe/getTagEvent', (req: express.Request, res: express.Response) => 
   const sql: string = 'select * from `events` where eventId in (select distinct eventId from `eventTag` where tagId in (?))'
   conn.query(sql, [tagIds], (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/getTagEvent`)
@@ -595,7 +616,7 @@ app.post('/insbe/getPersonTagEvent', (req: express.Request, res: express.Respons
   const sql: string = 'select * from `events` where eventId in (select a.* from (select distinct eventId from `eventTag` where tagId in (?) union all select distinct eventId from `personEvent` where personId = ?)a GROUP BY a.eventId HAVING COUNT(a.eventId)=2)'
   conn.query(sql, [tagIds, personId], (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/getPersonTagEvent`)
@@ -609,7 +630,7 @@ app.post('/insbe/getTrigger', (req: express.Request, res: express.Response) => {
   const sql: string = 'select `trigger` from `teamTrigger` where teamId = ?'
   conn.query(sql, teamId, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/getTrigger`)
@@ -629,7 +650,7 @@ app.post('/insbe/addUser', (req: express.Request, res: express.Response) => {
 
   conn.query(sql, user, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/addUser`)
@@ -644,7 +665,7 @@ app.post('/insbe/addProject', (req: express.Request, res: express.Response) => {
 
   conn.query(sql, project, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/addProject`)
@@ -659,7 +680,7 @@ app.post('/insbe/addTeam', (req: express.Request, res: express.Response) => {
 
   conn.query(sql, team, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/addTeam`)
@@ -677,7 +698,7 @@ app.post('/insbe/addPerson', (req: express.Request, res: express.Response) => {
 
   conn.query(sql, person, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/addPerson`)
@@ -694,7 +715,7 @@ app.post('/insbe/addTag', (req: express.Request, res: express.Response) => {
 
   conn.query(sql, tag, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/addTag`)
@@ -712,7 +733,7 @@ app.post('/insbe/addPersonEvent', (req: express.Request, res: express.Response) 
 
   conn.query(sql, personEvent, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/addPersonEvent`)
@@ -730,7 +751,7 @@ app.post('/insbe/addEventTag', (req: express.Request, res: express.Response) => 
 
   conn.query(sql, eventTag, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/addEventTag`)
@@ -748,7 +769,7 @@ app.post('/insbe/addTrigger', (req: express.Request, res: express.Response) => {
 
   conn.query(sql, teamTrigger, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/addTrigger`)
@@ -766,7 +787,7 @@ app.post('/insbe/delEventTag', (req: express.Request, res: express.Response) => 
 
   conn.query(sql, [eventTag.eventId, eventTag.tagId], (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/delEventTag`)
@@ -783,7 +804,7 @@ app.post('/insbe/updateFavourite', (req: express.Request, res: express.Response)
 
   conn.query(sql, [favourite, eventId], (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/updateFavourite`)
@@ -800,7 +821,7 @@ app.post('/insbe/updateTrigger', (req: express.Request, res: express.Response) =
 
   conn.query(sql, [trigger, teamId], (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/updateTrigger`)
@@ -826,12 +847,12 @@ app.post('/insbe/recordCallback', (req: express.Request, res: express.Response) 
     }
 
     if (err) {
-      console.error(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] query failed: ${err.message}`)
       const sql: string = 'update `events` set ? where eventId = ?'
 
       conn.query(sql, [event, event.eventId], (err: mysql.MysqlError | null, result: any) => {
         if (err) {
-          console.error(`[INS_BE] query failed: ${err.message}`)
+          console.log(`[INS_BE] query failed: ${err.message}`)
         } else {
           console.log(`UPDATE ${event.eventId}`)
           res.send(resData)
