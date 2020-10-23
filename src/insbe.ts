@@ -1,5 +1,6 @@
 import express from 'express'
 import compression from 'compression'
+import md5 from 'md5'
 import helmet from 'helmet'
 import mysql from 'mysql'
 import cron from 'node-cron'
@@ -11,13 +12,17 @@ import key from './config/key.json'
 
 const file_server: string = config.FILE_SERVER
 const project_name: string = config.PROJECT_NAME
+const port: number = config.SERVER_PORT
 const app: express.Application = express()
+const conn: mysql.Connection = mysql.createConnection(key)
 app.use(compression())
 app.use(helmet())
-const port: number = config.SERVER_PORT
-const conn: mysql.Connection = mysql.createConnection(key)
 
 let reqNum: number = 0
+let taskFinished: number = 0
+let taskQueue: Task[] = []
+let serverBusy: string = 'idle'
+let taskStarted = false
 
 let log_file: fs.WriteStream = fs.createWriteStream(__dirname + '/ins_be.log', { flags: 'w' })
 let log_stdout = process.stdout
@@ -86,9 +91,33 @@ interface TeamTrigger {
   trigger: string
 }
 
+interface Task {
+  taskId: string
+  taskAPIName: string
+  taskInfo: any
+}
+
 // cron schedule
 cron.schedule('*/5 * * * * *', (): void => {
   console.log('[CRON] excuting cron task')
+  axios.get(`${file_server}/${project_name}/status/isbusy`).then((response: AxiosResponse) => {
+    if (response.data.msg === 'idle') {
+      console.log(`GET ${file_server}/${project_name}/status/isbusy =SERVER IDLE=`)
+      serverBusy = 'idle'
+      if (taskStarted) {
+        taskFinished++
+        taskStarted = false
+      }
+      if (taskQueue.length > 0 && serverBusy === 'idle') {
+        runTask(taskQueue.shift()!)
+      }
+    } else {
+      console.log(`GET ${file_server}/${project_name}/status/isbusy =SERVER BUSY=`)
+    }
+  }).catch((err: AxiosError) => {
+    serverBusy = 'disconnect'
+    console.log(err)
+  })
   axios.get(`${file_server}/${project_name}/events`).then((response: AxiosResponse) => {
     if (response.data.msg === 'events found') {
       console.log(`GET ${file_server}/${project_name}/events`)
@@ -147,6 +176,13 @@ app.get('/insbe/', (req: express.Request, res: express.Response) => {
 })
 
 // File Server
+app.get('/insbe/status/busy', (req: express.Request, res: express.Response) => {
+  res.send({
+    status: [taskQueue.length, taskFinished],
+    isBusy: serverBusy
+  })
+})
+
 app.get('/insbe/event', (req: express.Request, res: express.Response) => {
   const eventId: string = String(req.query.eventId)
   axios.get(`${file_server}/${project_name}/events/${eventId}`).then((response: AxiosResponse) => {
@@ -278,51 +314,125 @@ app.post('/insbe/process/defaultTrigger', (req: express.Request, res: express.Re
 app.post('/insbe/process/trim', (req: express.Request, res: express.Response) => {
   const eventId: string = req.body.eventId
   const videos: object[] = req.body.videos
-  const delay: number = req.body.delay
-  axios.post(`${file_server}/${project_name}/process/${eventId}/trim`, {
+
+  const taskObj: any = {
+    taskAPIName: 'trim',
     eventId: eventId,
     videos: videos
-  }, { timeout: delay }).then((response: AxiosResponse) => {
-    if (response.data.msg) {
-      console.log(`POST ${file_server}/${project_name}/process/${eventId}/trim`)
-      res.send('trim success')
-    }
-  }).catch((err: AxiosError) => {
-    console.log(err)
-    res.send(null)
-  })
+  }
+
+  const task: Task  = {
+    taskId: md5(JSON.stringify(taskObj)),
+    taskAPIName: taskObj.taskAPIName,
+    taskInfo: taskObj
+  }
+
+  addTask(task)
+
+  console.log('[INS_BE] trim task added')
+  res.send('task queue updated')
+  
 })
 
 app.post('/insbe/process/annotate', (req: express.Request, res: express.Response) => {
   const eventId: string = req.body.eventId
-  axios.post(`${file_server}/${project_name}/process/${eventId}/annotate`, {
-    data: null
-  }, { timeout: 600 * 1000 }).then((response: AxiosResponse) => {
-    if (response.data.msg === 'annotation complete') {
-      console.log(`POST ${file_server}/${project_name}/process/${eventId}/annotate`)
-      res.send('annotation complete')
-    }
-  }).catch((err: AxiosError) => {
-    console.log(err)
-    res.send(null)
-  })
+
+  const taskObj: any = {
+    taskAPIName: 'annotate',
+    eventId: eventId
+  }
+
+  const task: Task = {
+    taskId: md5(JSON.stringify(taskObj)),
+    taskAPIName: taskObj.taskAPIName,
+    taskInfo: taskObj
+  }
+
+  addTask(task)
+
+  console.log('[INS_BE] annotate task added')
+  res.send('task queue updated')
+  
 })
 
 app.post('/insbe/process/reconstruct', (req: express.Request, res: express.Response) => {
   const eventId: string = req.body.eventId
   const method: string = req.body.method
-  axios.post(`${file_server}/${project_name}/process/${eventId}/reconstruct/${method}`, {
+  
+  const taskObj: any = {
+    taskAPIName: 'reconstruct',
     eventId: eventId,
     method: method
-  }, { timeout: 120 * 1000 }).then((response: AxiosResponse) => {
-    if (response.data.msg === 'reconstruction complete') {
-      console.log(`POST ${file_server}/${project_name}/process/${eventId}/reconstruct/${method}`)
-      res.send('reconstruction complete')
+  }
+
+  const task: Task  = {
+    taskId: md5(JSON.stringify(taskObj)),
+    taskAPIName: taskObj.taskAPIName,
+    taskInfo: taskObj
+  }
+
+  addTask(task)
+
+  console.log('[INS_BE] reconstruct task added')
+  res.send('task queue updated')
+
+})
+
+app.post('/insbe/process/quantize', (req: express.Request, res: express.Response) => {
+  const eventId: string = req.body.eventId
+  const trimVideos: object[] = req.body.trimVideos
+  const videoRoi: object[] = req.body.videoRoi
+  const method: string = req.body.method
+
+  axios.post(`${file_server}/${project_name}/process/${eventId}/roi`, {
+    eventId: eventId,
+    videos: videoRoi
+  }).then((response: AxiosResponse) => {
+    if (response.data.msg === 'ROI updated') {
+      console.log(`POST ${file_server}/${project_name}/process/${eventId}/roi`)
+      res.send('ROI updated')
     }
   }).catch((err: AxiosError) => {
     console.log(err)
     res.send(null)
   })
+
+  const trimTaskObj: any = {
+    taskAPIName: 'trim',
+    eventId: eventId,
+    videos: trimVideos
+  }
+
+  const annotateTaskObj: any = {
+    taskAPIName: 'annotate',
+    eventId: eventId
+  }
+
+  const reconstructTaskObj: any = {
+    taskAPIName: 'reconstruct',
+    eventId: eventId,
+    method: method
+  }
+
+  addTask({
+    taskId: md5(JSON.stringify(trimTaskObj)),
+    taskAPIName: trimTaskObj.taskAPIName,
+    taskInfo: trimTaskObj
+  })
+
+  addTask({
+    taskId: md5(JSON.stringify(annotateTaskObj)),
+    taskAPIName: annotateTaskObj.taskAPIName,
+    taskInfo: annotateTaskObj
+  })
+
+  addTask({
+    taskId: md5(JSON.stringify(reconstructTaskObj)),
+    taskAPIName: reconstructTaskObj.taskAPIName,
+    taskInfo: reconstructTaskObj
+  })
+  
+  res.send('quantize queue updated')
 })
 
 app.post('/insbe/process/reset_videos', (req: express.Request, res: express.Response) => {
@@ -676,6 +786,7 @@ app.post('/insbe/addProject', (req: express.Request, res: express.Response) => {
 
 app.post('/insbe/addTeam', (req: express.Request, res: express.Response) => {
   const team: Team = req.body.team
+  const userId: number = req.body.userId
   const sql: string = 'insert into `teams` set ?'
 
   conn.query(sql, team, (err: mysql.MysqlError | null, result: any) => {
@@ -683,8 +794,19 @@ app.post('/insbe/addTeam', (req: express.Request, res: express.Response) => {
       console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
     } else {
-      console.log(`POST /insbe/addTeam`)
-      res.send(result)
+      const userTeam = {
+        userId: userId,
+        teamId: result.insertId
+      }
+      conn.query('insert into `userTeam` set ?', userTeam, (err: mysql.MysqlError | null, result: any) => {
+        if (err) {
+          console.log(`[INS_BE] query failed: ${err.message}`)
+          res.send(null)
+        } else {
+          console.log(`POST /insbe/addTeam`)
+          res.send(result)
+        }
+      })
     }
   })
 })
@@ -868,3 +990,55 @@ app.post('/insbe/recordCallback', (req: express.Request, res: express.Response) 
 app.listen(port, () => {
   console.log(`listening at http://localhost:${port} now`)
 })
+
+function addTask(task: Task): boolean {
+  if (taskQueue.find((t) => t.taskId === task.taskId)) {
+    console.log('[INS_TASK] task repeated, abandoned')
+    return false
+  } else {
+    console.log('[INS_TASK] task added')
+    taskQueue.push(task)
+    return true
+  }
+}
+
+function runTask(task: Task): void {
+  const API = task.taskAPIName
+  serverBusy = 'busy'
+  taskStarted = true
+  switch(API) {
+    case 'trim':
+      trimTask(task.taskInfo.eventId, task.taskInfo.videos)
+      break
+    case 'annotate':
+      annotateTask(task.taskInfo.eventId)
+      break
+    case 'reconstruct':
+      reconstructTask(task.taskInfo.eventId, task.taskInfo.method)
+      break
+    default:
+      serverBusy = 'idle'
+      taskStarted = false
+      break
+  }
+}
+
+function trimTask(eventId: string, videos: object[]) {
+  axios.post(`${file_server}/${project_name}/process/${eventId}/trim`, {
+    eventId: eventId,
+    videos: videos
+  })
+}
+
+function annotateTask(eventId: string) {
+  axios.post(`${file_server}/${project_name}/process/${eventId}/annotate`, {
+    data: null
+  })
+}
+
+function reconstructTask(eventId: string, method: string) {
+  axios.post(`${file_server}/${project_name}/process/${eventId}/reconstruct/${method}`, {
+    eventId: eventId,
+    method: method
+  })
+}
