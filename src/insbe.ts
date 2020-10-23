@@ -20,8 +20,10 @@ app.use(helmet())
 
 let reqNum: number = 0
 let taskFinished: number = 0
+let taskFailed: number = 0
 let taskQueue: Task[] = []
 let serverBusy: string = 'idle'
+let serverRecording: boolean = false
 let taskStarted = false
 
 let log_file: fs.WriteStream = fs.createWriteStream(__dirname + '/ins_be.log', { flags: 'w' })
@@ -97,11 +99,23 @@ interface Task {
   taskInfo: any
 }
 
+interface TeamCameraParam {
+  teamId: number,
+  cameraParam: string
+}
+
 // cron schedule
 cron.schedule('*/5 * * * * *', (): void => {
   console.log('[CRON] excuting cron task')
   axios.get(`${file_server}/${project_name}/status/isbusy`).then((response: AxiosResponse) => {
-    if (response.data.msg === 'idle') {
+    if (response.data.data.serverRecording) {
+      serverRecording = true
+      console.log(`GET ${file_server}/${project_name}/status/isbusy =SERVER RECORDING=`)
+    } else {
+      serverRecording = false
+      console.log(`GET ${file_server}/${project_name}/status/isbusy =SERVER NOT RECORDING=`)
+    }
+    if (response.data.data.serverBusy === 'idle') {
       console.log(`GET ${file_server}/${project_name}/status/isbusy =SERVER IDLE=`)
       serverBusy = 'idle'
       if (taskStarted) {
@@ -126,13 +140,6 @@ cron.schedule('*/5 * * * * *', (): void => {
 
       for (let i = 0; i < events.length; i++) {
         const event: Event = events[i]  // ts compile check
-        if (Object.prototype.hasOwnProperty.call(event, 'eventName')) {
-          if (event.eventName === '') {
-            event.eventName = event.eventId
-          }
-        } else {
-          event.eventName = event.eventId
-        }
         event.reconstructMethod = JSON.stringify(event.reconstructMethod)
         event.videos = JSON.stringify(event.videos)
 
@@ -178,8 +185,9 @@ app.get('/insbe/', (req: express.Request, res: express.Response) => {
 // File Server
 app.get('/insbe/status/busy', (req: express.Request, res: express.Response) => {
   res.send({
-    status: [taskQueue.length, taskFinished],
-    isBusy: serverBusy
+    status: [taskQueue.length, taskFinished, taskFailed],
+    isBusy: serverBusy,
+    isRecording: serverRecording
   })
 })
 
@@ -356,25 +364,42 @@ app.post('/insbe/process/annotate', (req: express.Request, res: express.Response
 })
 
 app.post('/insbe/process/reconstruct', (req: express.Request, res: express.Response) => {
+  const teamId: number = req.body.teamId
   const eventId: string = req.body.eventId
   const method: string = req.body.method
-  
-  const taskObj: any = {
-    taskAPIName: 'reconstruct',
-    eventId: eventId,
-    method: method
-  }
+  const sql: string = 'select `cameraParam` from `teamCameraParam` where teamId = ?'
 
-  const task: Task  = {
-    taskId: md5(JSON.stringify(taskObj)),
-    taskAPIName: taskObj.taskAPIName,
-    taskInfo: taskObj
-  }
-
-  addTask(task)
-
-  console.log('[INS_BE] reconstruct task added')
-  res.send('task queue updated')
+  conn.query(sql, teamId, (err: mysql.MysqlError | null, result: any) => {
+    if (err) {
+      console.log(`[INS_BE] query failed: ${err.message}`)
+      res.send(null)
+    } else {
+      console.log(`POST /insbe/getCameraParam`)
+      if (result.length > 0) {
+        const cameraParam: object = JSON.parse(result[0].cameraParam)
+        const taskObj: any = {
+          taskAPIName: 'reconstruct',
+          eventId: eventId,
+          method: method,
+          cameraParam: cameraParam
+        }
+      
+        const task: Task  = {
+          taskId: md5(JSON.stringify(taskObj)),
+          taskAPIName: taskObj.taskAPIName,
+          taskInfo: taskObj
+        }
+      
+        addTask(task)
+      
+        console.log('[INS_BE] reconstruct task added')
+        res.send('task queue updated')
+      } else {
+        res.send(null)
+      }
+      
+    }
+  })
 
 })
 
@@ -383,6 +408,7 @@ app.post('/insbe/process/quantize', (req: express.Request, res: express.Response
   const trimVideos: object[] = req.body.trimVideos
   const videoRoi: object[] = req.body.videoRoi
   const method: string = req.body.method
+  const teamId: number = req.body.teamId
 
   axios.post(`${file_server}/${project_name}/process/${eventId}/roi`, {
     eventId: eventId,
@@ -390,11 +416,36 @@ app.post('/insbe/process/quantize', (req: express.Request, res: express.Response
   }).then((response: AxiosResponse) => {
     if (response.data.msg === 'ROI updated') {
       console.log(`POST ${file_server}/${project_name}/process/${eventId}/roi`)
-      res.send('ROI updated')
     }
   }).catch((err: AxiosError) => {
     console.log(err)
-    res.send(null)
+    taskFailed++
+  })
+
+  const sql: string = 'select `cameraParam` from `teamCameraParam` where teamId = ?'
+  conn.query(sql, teamId, (err: mysql.MysqlError | null, result: any) => {
+    if (err) {
+      console.log(`[INS_BE] query failed: ${err.message}`)
+      taskFailed++
+    } else {
+      console.log(`POST /insbe/getCameraParam`)
+      if (result.length > 0) {
+        const cameraParam: object = JSON.parse(result[0].cameraParam)
+        const reconstructTaskObj: any = {
+          taskAPIName: 'reconstruct',
+          eventId: eventId,
+          method: method,
+          cameraParam: cameraParam
+        }
+        addTask({
+          taskId: md5(JSON.stringify(reconstructTaskObj)),
+          taskAPIName: reconstructTaskObj.taskAPIName,
+          taskInfo: reconstructTaskObj
+        })
+      } else {
+        taskFailed++
+      }
+    }
   })
 
   const trimTaskObj: any = {
@@ -408,12 +459,6 @@ app.post('/insbe/process/quantize', (req: express.Request, res: express.Response
     eventId: eventId
   }
 
-  const reconstructTaskObj: any = {
-    taskAPIName: 'reconstruct',
-    eventId: eventId,
-    method: method
-  }
-
   addTask({
     taskId: md5(JSON.stringify(trimTaskObj)),
     taskAPIName: trimTaskObj.taskAPIName,
@@ -424,12 +469,6 @@ app.post('/insbe/process/quantize', (req: express.Request, res: express.Response
     taskId: md5(JSON.stringify(annotateTaskObj)),
     taskAPIName: annotateTaskObj.taskAPIName,
     taskInfo: annotateTaskObj
-  })
-
-  addTask({
-    taskId: md5(JSON.stringify(reconstructTaskObj)),
-    taskAPIName: reconstructTaskObj.taskAPIName,
-    taskInfo: reconstructTaskObj
   })
   
   res.send('quantize queue updated')
@@ -451,17 +490,24 @@ app.post('/insbe/process/reset_videos', (req: express.Request, res: express.Resp
 })
 
 app.post('/insbe/events/start', (req: express.Request, res: express.Response) => {
+  if (serverRecording) {
+    res.send(null)
+    return
+  }
+
   const eventName: string = req.body.eventName
   const userId: number = req.body.userId
   const projectId: number = req.body.projectId
   const startTime: string = req.body.startTime
   const cameraIPs: string[] = req.body.cameraIPs
+  const autoDetection: boolean = false
   axios.post(`${file_server}/${project_name}/events/start`, {
     eventName: eventName,
     userId: userId,
     projectId: projectId,
     startTime: startTime,
-    cameraIPs: cameraIPs
+    cameraIPs: cameraIPs,
+    autoDetection: autoDetection
   }).then((response: AxiosResponse) => {
     console.log(`POST ${file_server}/${project_name}/events/start`)
     res.send('record start')
@@ -484,6 +530,11 @@ app.post('/insbe/events/stop', (req: express.Request, res: express.Response) => 
 })
 
 app.post('/insbe/events/trigger_start', (req: express.Request, res: express.Response) => {
+  if (serverRecording) {
+    res.send(null)
+    return
+  }
+  
   const eventName: string = req.body.eventName
   const userId: number = req.body.userId
   const projectId: number = req.body.projectId
@@ -540,7 +591,7 @@ app.post('/insbe/events/trigger_stop', (req: express.Request, res: express.Respo
 
 // Database
 app.get('/insbe/events', (req: express.Request, res: express.Response) => {
-  const sql: string = 'select * from `events`'
+  const sql: string = 'select * from `events` where hasSample = 1 order by datetime desc'
   conn.query(sql, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
       console.log(`[INS_BE] query failed: ${err.message}`)
@@ -754,6 +805,25 @@ app.post('/insbe/getTrigger', (req: express.Request, res: express.Response) => {
   })
 })
 
+app.post('/insbe/getCameraParam', (req: express.Request, res: express.Response) => {
+  const teamId: number = req.body.teamId
+  const sql: string = 'select `cameraParam` from `teamCameraParam` where teamId = ?'
+  conn.query(sql, teamId, (err: mysql.MysqlError | null, result: any) => {
+    if (err) {
+      console.log(`[INS_BE] query failed: ${err.message}`)
+      res.send(null)
+    } else {
+      console.log(`POST /insbe/getCameraParam`)
+      if (result.length > 0) {
+        res.send(result)
+      } else {
+        res.send(null)
+      }
+      
+    }
+  })
+})
+
 app.post('/insbe/addUser', (req: express.Request, res: express.Response) => {
   const user: User = req.body.user
   const sql: string = 'insert into `users` set ?'
@@ -900,6 +970,24 @@ app.post('/insbe/addTrigger', (req: express.Request, res: express.Response) => {
   })
 })
 
+app.post('/insbe/addCameraParam', (req: express.Request, res: express.Response) => {
+  const teamCameraParam: TeamCameraParam = {
+    teamId: req.body.teamId,
+    cameraParam: req.body.cameraParam
+  }
+  const sql: string = 'insert into `teamCameraParam` set ?'
+
+  conn.query(sql, teamCameraParam, (err: mysql.MysqlError | null, result: any) => {
+    if (err) {
+      console.log(`[INS_BE] query failed: ${err.message}`)
+      res.send(null)
+    } else {
+      console.log(`POST /insbe/addCameraParam`)
+      res.send('cameraparam added')
+    }
+  })
+})
+
 app.post('/insbe/delEventTag', (req: express.Request, res: express.Response) => {
   const eventTag = {
     eventId: req.body.eventId,
@@ -952,8 +1040,26 @@ app.post('/insbe/updateTrigger', (req: express.Request, res: express.Response) =
   })
 })
 
+app.post('/insbe/updateCameraParam', (req: express.Request, res: express.Response) => {
+  const teamId: number = req.body.teamId
+  const cameraParam: string = req.body.cameraParam
+
+  const sql: string = 'update `teamCameraParam` set `cameraParam` = ? where teamId = ?'
+
+  conn.query(sql, [cameraParam, teamId], (err: mysql.MysqlError | null, result: any) => {
+    if (err) {
+      console.log(`[INS_BE] query failed: ${err.message}`)
+      res.send(null)
+    } else {
+      console.log(`POST /insbe/updateCameraParam`)
+      res.send('cameraparam updated')
+    }
+  })
+})
+
+
 app.post('/insbe/recordCallback', (req: express.Request, res: express.Response) => {
-  const event: Event = req.body.event
+  const event: any = req.body.event
 
   event.reconstructMethod = JSON.stringify(event.reconstructMethod)
   event.videos = JSON.stringify(event.videos)
@@ -1014,7 +1120,7 @@ function runTask(task: Task): void {
       annotateTask(task.taskInfo.eventId)
       break
     case 'reconstruct':
-      reconstructTask(task.taskInfo.eventId, task.taskInfo.method)
+      reconstructTask(task.taskInfo.eventId, task.taskInfo.method, task.taskInfo.cameraParam)
       break
     default:
       serverBusy = 'idle'
@@ -1036,9 +1142,10 @@ function annotateTask(eventId: string) {
   })
 }
 
-function reconstructTask(eventId: string, method: string) {
+function reconstructTask(eventId: string, method: string, cameraParam: object) {
   axios.post(`${file_server}/${project_name}/process/${eventId}/reconstruct/${method}`, {
     eventId: eventId,
-    method: method
+    method: method,
+    cameraParam: cameraParam
   })
 }
