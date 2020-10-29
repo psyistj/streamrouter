@@ -5,7 +5,7 @@ import helmet from 'helmet'
 import mysql from 'mysql'
 import cron from 'node-cron'
 import fs from 'fs'
-import axios, { AxiosAdapter, AxiosError, AxiosInstance, AxiosResponse } from 'axios'
+import axios, { AxiosError, AxiosResponse } from 'axios'
 import util from 'util'
 import config from './config/insbe-config.json'
 import key from './config/key.json'
@@ -15,8 +15,10 @@ const project_name: string = config.PROJECT_NAME
 const port: number = config.SERVER_PORT
 const app: express.Application = express()
 const conn: mysql.Connection = mysql.createConnection(key)
+
 app.use(compression())
 app.use(helmet())
+app.use(express.json())
 
 let reqNum: number = 0
 let taskFinished: number = 0
@@ -40,6 +42,7 @@ interface Event {
   eventName: string,
   userId: number,
   projectId: number,
+  personId?: number | null,
   datetime: string,
   reconstructMethod: string[] | string,
   videos: object[] | string,
@@ -105,8 +108,10 @@ interface TeamCameraParam {
 }
 
 // cron schedule
-cron.schedule('*/5 * * * * *', (): void => {
-  console.log('[CRON] excuting cron task')
+
+// check status
+cron.schedule('*/2 * * * * *', (): void => {
+  console.log('[CRON] excuting status cron task')
   axios.get(`${file_server}/${project_name}/status/isbusy`).then((response: AxiosResponse) => {
     if (response.data.data.serverRecording) {
       serverRecording = true
@@ -132,6 +137,11 @@ cron.schedule('*/5 * * * * *', (): void => {
     serverBusy = 'disconnect'
     console.log(err)
   })
+})
+
+// check events
+cron.schedule('*/5 * * * * *', (): void => {
+  console.log('[CRON] excuting events cron task')
   axios.get(`${file_server}/${project_name}/events`).then((response: AxiosResponse) => {
     if (response.data.msg === 'events found') {
       console.log(`GET ${file_server}/${project_name}/events`)
@@ -155,7 +165,7 @@ cron.schedule('*/5 * * * * *', (): void => {
               if (err) {
                 console.log(`[INS_BE] query failed: ${err.message}`)
               } else {
-                console.log(`UPDATE ${event.eventId}`)
+                //console.log(`UPDATE ${event.eventId}`)
               }
             })
             continueFlag = false
@@ -175,8 +185,6 @@ cron.schedule('*/5 * * * * *', (): void => {
   })
 
 })
-
-app.use(express.json())
 
 app.get('/insbe/', (req: express.Request, res: express.Response) => {
   res.send({ data: "[ins_be] server connected." })
@@ -252,7 +260,7 @@ app.get('/insbe/process/reconstruct', (req: express.Request, res: express.Respon
         console.log(`GET ${file_server}/${project_name}/process/${eventId}/reconstruct/${method}`)
         res.send(response.data.data)
       }
-    }).catch((err:AxiosError) => {
+    }).catch((err: AxiosError) => {
       console.log(err)
       res.send(null)
     })
@@ -298,7 +306,7 @@ app.post('/insbe/process/defaultRoi', (req: express.Request, res: express.Respon
       console.log(`POST ${file_server}/${project_name}/process/defaultRoi`)
       res.send('Default ROI updated')
     }
-  }).catch((err) => {
+  }).catch((err: AxiosError) => {
     console.log(err)
     res.send(null)
   })
@@ -405,21 +413,31 @@ app.post('/insbe/process/reconstruct', (req: express.Request, res: express.Respo
 
 app.post('/insbe/process/quantize', (req: express.Request, res: express.Response) => {
   const eventId: string = req.body.eventId
-  const trimVideos: object[] = req.body.trimVideos
-  const videoRoi: object[] = req.body.videoRoi
+  const trimVideos: any = req.body.trimVideos
   const method: string = req.body.method
   const teamId: number = req.body.teamId
 
-  axios.post(`${file_server}/${project_name}/process/${eventId}/roi`, {
+  const trimTaskObj: any = {
+    taskAPIName: 'trim',
     eventId: eventId,
-    videos: videoRoi
-  }).then((response: AxiosResponse) => {
-    if (response.data.msg === 'ROI updated') {
-      console.log(`POST ${file_server}/${project_name}/process/${eventId}/roi`)
-    }
-  }).catch((err: AxiosError) => {
-    console.log(err)
-    taskFailed++
+    videos: trimVideos
+  }
+
+  const annotateTaskObj: any = {
+    taskAPIName: 'annotate',
+    eventId: eventId
+  }
+
+  addTask({
+    taskId: md5(JSON.stringify(trimTaskObj)),
+    taskAPIName: trimTaskObj.taskAPIName,
+    taskInfo: trimTaskObj
+  })
+
+  addTask({
+    taskId: md5(JSON.stringify(annotateTaskObj)),
+    taskAPIName: annotateTaskObj.taskAPIName,
+    taskInfo: annotateTaskObj
   })
 
   const sql: string = 'select `cameraParam` from `teamCameraParam` where teamId = ?'
@@ -446,29 +464,6 @@ app.post('/insbe/process/quantize', (req: express.Request, res: express.Response
         taskFailed++
       }
     }
-  })
-
-  const trimTaskObj: any = {
-    taskAPIName: 'trim',
-    eventId: eventId,
-    videos: trimVideos
-  }
-
-  const annotateTaskObj: any = {
-    taskAPIName: 'annotate',
-    eventId: eventId
-  }
-
-  addTask({
-    taskId: md5(JSON.stringify(trimTaskObj)),
-    taskAPIName: trimTaskObj.taskAPIName,
-    taskInfo: trimTaskObj
-  })
-
-  addTask({
-    taskId: md5(JSON.stringify(annotateTaskObj)),
-    taskAPIName: annotateTaskObj.taskAPIName,
-    taskInfo: annotateTaskObj
   })
   
   res.send('quantize queue updated')
@@ -518,11 +513,10 @@ app.post('/insbe/events/start', (req: express.Request, res: express.Response) =>
 })
 
 app.post('/insbe/events/stop', (req: express.Request, res: express.Response) => {
-  axios.post(`${file_server}/${project_name}/events/stop`, {}).then((response: AxiosResponse) => {
-    if (response) {
-      console.log(`POST ${file_server}/${project_name}/events/stop`)
-      res.send('record stop')
-    }
+  axios.post(`${file_server}/${project_name}/events/stop`, {
+  }).then((response: AxiosResponse) => {
+    console.log(`POST ${file_server}/${project_name}/events/stop`)
+    res.send('record stop')
   }).catch((err: AxiosError) => {
     console.log(err)
     res.send(null)
@@ -541,29 +535,30 @@ app.post('/insbe/events/trigger_start', (req: express.Request, res: express.Resp
   const teamId: number = req.body.teamId
   const startTime: string = req.body.startTime
   const cameraIPs: string[] = req.body.cameraIPs
+  const autoDetection: boolean = true
 
   const sql: string = 'select `trigger` from `teamTrigger` where teamId = ?'
   conn.query(sql, teamId, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
       console.log(`[INS_BE] query failed: ${err.message}`)
       res.send(null)
+      return
     } else {
       console.log(`POST /insbe/getTrigger`)
       if (result.length > 0) {
         const trigger = JSON.parse(result[0].trigger)
-        axios.post(`${file_server}/${project_name}/events/trigger_start`, {
+        axios.post(`${file_server}/${project_name}/events/start`, {
           eventName: eventName,
           userId: userId,
           projectId: projectId,
           teamId: teamId,
           trigger: trigger,
           startTime: startTime,
-          cameraIPs: cameraIPs
+          cameraIPs: cameraIPs,
+          autoDetection: autoDetection
         }).then((response: AxiosResponse) => {
-          if (response.data.msg === 'trigger start') {
-            console.log(`POST ${file_server}/${project_name}/events/trigger_start`)
-            res.send('trigger start')
-          }
+          console.log(`POST ${file_server}/${project_name}/events/start (trigger)`)
+          res.send('trigger start')
         }).catch((err: AxiosError) => {
           console.log(err)
           res.send(null)
@@ -578,11 +573,10 @@ app.post('/insbe/events/trigger_start', (req: express.Request, res: express.Resp
 })
 
 app.post('/insbe/events/trigger_stop', (req: express.Request, res: express.Response) => {
-  axios.post(`${file_server}/${project_name}/events/trigger_stop`, {}).then((response: AxiosResponse) => {
-    if (response.data.msg === 'trigger stopped') {
-      console.log(`POST ${file_server}/${project_name}/events/trigger_stop`)
-      res.send('trigger stopped')
-    }
+  axios.post(`${file_server}/${project_name}/events/stop`, {
+  }).then((response: AxiosResponse) => {
+    console.log(`POST ${file_server}/${project_name}/events/stop (trigger)`)
+    res.send('trigger stopped')
   }).catch((err: AxiosError) => {
     console.log(err)
     res.send(null)
@@ -791,7 +785,7 @@ app.post('/insbe/getTrigger', (req: express.Request, res: express.Response) => {
   const sql: string = 'select `trigger` from `teamTrigger` where teamId = ?'
   conn.query(sql, teamId, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.log(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] /insbe/getTrigger query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/getTrigger`)
@@ -922,7 +916,6 @@ app.post('/insbe/addPersonEvent', (req: express.Request, res: express.Response) 
     eventId: req.body.eventId
   }
   const sql: string = 'insert into `personEvent` set ?'
-
   conn.query(sql, personEvent, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
       console.log(`[INS_BE] query failed: ${err.message}`)
@@ -961,7 +954,7 @@ app.post('/insbe/addTrigger', (req: express.Request, res: express.Response) => {
 
   conn.query(sql, teamTrigger, (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.log(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] /insbe/addTrigger query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/addTrigger`)
@@ -1031,7 +1024,7 @@ app.post('/insbe/updateTrigger', (req: express.Request, res: express.Response) =
 
   conn.query(sql, [trigger, teamId], (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.log(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] /insbe/updateTrigger query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/updateTrigger`)
@@ -1048,7 +1041,7 @@ app.post('/insbe/updateCameraParam', (req: express.Request, res: express.Respons
 
   conn.query(sql, [cameraParam, teamId], (err: mysql.MysqlError | null, result: any) => {
     if (err) {
-      console.log(`[INS_BE] query failed: ${err.message}`)
+      console.log(`[INS_BE] /insbe/updateCameraParam query failed: ${err.message}`)
       res.send(null)
     } else {
       console.log(`POST /insbe/updateCameraParam`)
@@ -1060,6 +1053,7 @@ app.post('/insbe/updateCameraParam', (req: express.Request, res: express.Respons
 
 app.post('/insbe/recordCallback', (req: express.Request, res: express.Response) => {
   const event: any = req.body.event
+  event.datetime = new Date().toISOString().slice(0, 19).replace('T', ' ')
 
   event.reconstructMethod = JSON.stringify(event.reconstructMethod)
   event.videos = JSON.stringify(event.videos)
@@ -1133,12 +1127,16 @@ function trimTask(eventId: string, videos: object[]) {
   axios.post(`${file_server}/${project_name}/process/${eventId}/trim`, {
     eventId: eventId,
     videos: videos
+  }).catch((err: AxiosError) => {
+    console.log(err)
   })
 }
 
 function annotateTask(eventId: string) {
   axios.post(`${file_server}/${project_name}/process/${eventId}/annotate`, {
     data: null
+  }).catch((err: AxiosError) => {
+    console.log(err)
   })
 }
 
@@ -1147,5 +1145,7 @@ function reconstructTask(eventId: string, method: string, cameraParam: object) {
     eventId: eventId,
     method: method,
     cameraParam: cameraParam
+  }).catch((err: AxiosError) => {
+    console.log(err)
   })
 }
